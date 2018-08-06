@@ -2,29 +2,17 @@
 import urllib
 import urllib2
 import json
-import io
-
-
-# authorization tokens, taken from credentials given by api
-ipinfo_args = {'token': '6d867ad27aea75'}
-openweather_args = {'appid': '972c2264ea91f1f814dbe62f5208c9e1'}
-
-# api urls
-location_determination = 'https://ipinfo.io'
-weather_determination = 'https://api.openweathermap.org/data/2.5/weather'
-
-# folder of http server where received data are stored
-server_root_folder = '/var/www/html/weather'
+import re
 
 
 def api_get_request(url, args):
     """returns response of GET request to url and pass args as parameters"""
     get_params = urllib.urlencode(args)
     req = urllib2.Request(url + '?' + get_params)
-
     opener = urllib2.build_opener()
     opener.addheaders = [('User-Agent', 'curl/7.37.0')]
     response = opener.open(req)
+
     return json.loads(response.read())
 
 
@@ -67,32 +55,40 @@ def response_get_wind(api_data):
     return 'Wind: ' + str(api_data['wind']['speed']) + ' m/sec'
 
 
-def dump_to_file(api_data, filename):
-    """calls all function containing 'response_get' in
-    signature and writes output into http server root folder"""
+def build_response(api_data):
+    """returns html page with response from weather api"""
+    response = []
+
+    for i in globals():
+        item = globals()[i]
+        if callable(item) and "response_get" in i:
+            response.append('<p>' + item(api_data) + '</p>')
+    return response
+
+
+def application(environ, start_response):
+
+    # authorization tokens, taken from credentials given by api
+    ipinfo_args = {'token': '6d867ad27aea75'}
+    openweather_args = {'appid': '972c2264ea91f1f814dbe62f5208c9e1'}
+
+    # api urls
+    location_determination = 'https://ipinfo.io'
+    weather_determination = 'https://api.openweathermap.org/data/2.5/weather'
+
     try:
-        fd = io.open(filename + "/index.html", "w+", encoding='utf-8')
-        fd.write(unicode('<html>\r\n<body>\r\n'))
-        for i in globals():
-            item = globals()[i]
-            if callable(item) and "response_get" in i:
-                fd.write(unicode('<p>' + item(api_data) + '</p>'))
-        fd.write(unicode('</body>\r\n</html>\r\n'))
-        fd.close()
-    except IOError:
-        pass
+        ip = re.search('(?<=ip2w\/)[0-9]+(?:\.[0-9]+){3}', environ['PATH_INFO'])
+        if ip:
+            location_determination += ('/' + ip.group(0))
 
+        start_response('200 OK', [('Content-Type', 'text/html')])
+        lat, lon = api_get_request(location_determination, ipinfo_args)['loc'].split(',')
 
-try:
-    lat, lon = api_get_request(location_determination, ipinfo_args)['loc'].split(',')
-    openweather_args['lat'] = lat
-    openweather_args['lon'] = lon
+        openweather_args['lat'] = lat
+        openweather_args['lon'] = lon
 
-    data = api_get_request(weather_determination, openweather_args)
+        data = api_get_request(weather_determination, openweather_args)
 
-    dump_to_file(data, server_root_folder)
-
-except urllib2.URLError:
-    pass
-except KeyboardInterrupt:
-    pass
+        return build_response(data)
+    except urllib2.URLError:
+        return ["<h3 style='color:red'>Connection to weather api failed</h3>"]
