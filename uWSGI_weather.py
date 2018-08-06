@@ -28,7 +28,7 @@ def response_get_location(api_data):
 
 
 def response_get_pressure(api_data):
-    """returns atmospheric pressure"""
+    """returns atmospheric pressure (mm of mercury)"""
     def hpa_to_mm_mercury(hpa_val):
         """convert 10^2 Pascals to millimeters of mercury"""
         return hpa_val * 100.0 / 133.322387415
@@ -37,7 +37,7 @@ def response_get_pressure(api_data):
 
 
 def response_get_temperature(api_data):
-    """returns temperature"""
+    """returns temperature (Celsius)"""
     def k_to_celsium(k_val):
         """coverts Kelvin degrees to Celsius"""
         return k_val - 273.15
@@ -51,8 +51,13 @@ def response_get_humidity(api_data):
 
 
 def response_get_wind(api_data):
-    """returns wind speed"""
+    """returns wind speed (m/s)"""
     return 'Wind: ' + str(api_data['wind']['speed']) + ' m/sec'
+
+
+def response_get_conditions(api_data):
+    """returns verbal description of weather"""
+    return "Conditions: " + str(api_data['weather'].pop()['description'])
 
 
 def build_response(api_data):
@@ -77,7 +82,7 @@ def application(environ, start_response):
     weather_determination = 'https://api.openweathermap.org/data/2.5/weather'
 
     try:
-        ip = re.search('(?<=ip2w\/)[0-9]+(?:\.[0-9]+){3}', environ['PATH_INFO'])
+        ip = re.search('(?<=ip2w/)[0-9]+(?:\.[0-9]+){3}', environ['PATH_INFO'])
         if ip:
             location_determination += ('/' + ip.group(0))
 
