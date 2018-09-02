@@ -95,7 +95,7 @@ def read_conf(opts, conf):
 def application(environ, start_response):
 
     opts = {
-        "config": "/usr/local/etc/uwsgi.conf",
+        "config": "/usr/local/etc/uwsgi_weather.conf",
         "log_level": "INFO",
         "log_path": "/var/log/uwsgi_weather.log",
         "token": "6d867ad27aea75",
