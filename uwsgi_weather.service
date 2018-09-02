@@ -1,0 +1,9 @@
+[Unit]
+Description=uWSGI instance to serve uwsgi_weather
+
+[Service]
+ExecStartPre=-/bin/bash -c 'mkdir -p /run/uwsgi_weather; chown user:nginx /run/uwsgi_weather'
+ExecStart=/bin/bash -c 'cd /usr/local/ip2w/; source uwsgienv/bin/activate; uwsgi --ini uwsgi_weather.ini'
+
+[Install]
+WantedBy=multi-user.target
